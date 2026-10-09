@@ -1,0 +1,22 @@
+# Ports (Go v1.3.2 is the behavioral oracle): one module per recipient type,
+# mirroring the Go tree — x25519.go, scrypt.go (passphrase flow including the
+# wordlist auto-generation), pq.go (ML-KEM-768 + X25519 hybrid over HPKE,
+# label `age-encryption.org/mlkem768x25519`), agessh/ (ssh-rsa, ssh-ed25519,
+# passphrase-encrypted keys), tag/ (tagged P-256 and tagged hybrid).
+# Empty in S0: implementation lands in S2 (standard) and S3 (PQ, SSH, tagged).
+
+[package]
+name = "age-recipients"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+curve25519-dalek = { workspace = true }
+scrypt = { workspace = true }
+hkdf = { workspace = true }
+libcrux-ml-kem = { workspace = true }

@@ -1,0 +1,72 @@
+# Rust port CI (Stage S0). Additive by rule: the Go workflows (test.yml,
+# build.yml, interop.yml, ronn.yml) are untouched, and the Go implementation
+# stays the shipped implementation until the S5 gate (product decision,
+# 2026-10-09).
+#
+# Gates: rustfmt, clippy (-D warnings), cargo test, cargo-deny (advisories +
+# licenses enforced; bans/sources warn), cargo-audit (RustSec advisory DB).
+# The toolchain comes from rust-toolchain.toml, so CI and local builds are
+# identical. Action versions are pinned to exact release tags; bumps are
+# deliberate commits. setup-rust-toolchain v2 caches the registry by default.
+
+name: rust
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
+        with:
+          components: clippy
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
+      - run: cargo test --workspace
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2.1.1
+
+  audit:
+    name: cargo-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

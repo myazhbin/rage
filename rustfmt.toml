@@ -1,0 +1,5 @@
+# rustfmt: defaults, on purpose.
+#
+# The port's style bar is "idiomatic Rust as rustfmt defines it" — no style
+# overrides until a concrete, reviewable reason appears, and then only via a
+# deliberate commit. `edition` is inherited from Cargo.toml by rustfmt.

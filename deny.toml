@@ -1,0 +1,64 @@
+# cargo-deny configuration for the age Rust port (added in Stage S0).
+#
+# Gate policy (approved review plan): advisories + licenses are ENFORCED in
+# CI; bans and sources start at "warn" so a new class of transitive
+# dependency gets discussed before it is banned outright (the dependency
+# surface stabilizes in S1-S3).
+#
+# Context for reviewers: the graph is kept small on purpose — audited
+# primitive crates only, no cryptography written in this repo, and rage /
+# the Rust `age` crate are neither the implementation base nor a design
+# reference (locked product decisions, 2026-10-09). libcrux-ml-kem brings
+# the widest subtree (its build tooling: bindgen/cc/wasm-bindgen; its
+# verification annotations: hax-lib) — expected, and watched by these gates.
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+# A security tool must not build inside a window of known vulnerabilities.
+# Fail on any applicable advisory and on yanked release artifacts. A finding
+# with no fixed version available is triaged in the open — patched, or
+# consciously accepted via a named `ignore` that states the reason and the
+# review date — never silently.
+yanked = "deny"
+# RUSTSEC-2026-0173 (unmaintained): `proc-macro-error2` v2.0.1, transitive
+# via libcrux-ml-kem 0.0.11 -> hax-lib-macros 0.3.7 -> hax-lib 0.3.7 ->
+# libcrux-intrinsics. No fixed version exists ("No safe upgrade is
+# available!"). It is a proc-macro error-reporting helper used by libcrux's
+# compile-time formal-methods annotations — not part of the runtime crypto
+# path. Accepted 2026-10-09 (S0) per the triage rule above; drop this
+# entry at the next libcrux release that stops pulling hax-lib 0.3.7.
+ignore = [
+    { id = "RUSTSEC-2026-0173", reason = "Unmaintained proc-macro-error2 via libcrux 0.0.11's hax annotations; no upgrade available; compile-time tooling only, not runtime crypto. Accepted 2026-10-09." },
+]
+
+[licenses]
+version = 2
+# Allow-list = the closed set of license terms in the resolved graph at the
+# S0 pin set (observed via `cargo metadata`; audit trail in port/README.md).
+# `OR` expressions pass when one alternative is allowed; `AND` requires
+# every term. New terms can only enter when a dependency is added — the
+# bump must extend this list deliberately, naming the crate that introduced
+# it.
+allow = [
+    "Apache-2.0",   # RustCrypto crates, libcrux family, hax annotations
+    "MIT",          # bech32 and the dual-licensed majority of the graph
+    "BSD-3-Clause", # curve25519-dalek, subtle, bindgen
+    "ISC",          # libloading (libcrux build tooling)
+    "Unicode-3.0",  # unicode-ident (the AND-term of its dual license)
+    # Also present, only inside OR-terms already covered above (recorded so
+    # the list stays an honest picture of the graph, not minimal theater):
+    #   Unlicense (aho-corasick, memchr), BSD-1-Clause and
+    #   LGPL-2.1-or-later (r-efi, fiat-crypto's third alternatives)
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

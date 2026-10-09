@@ -1,0 +1,87 @@
+# Cargo workspace for the Rust port of age.
+#
+# Stage S0 (this commit): wired-but-empty crates over a pinned toolchain. The
+# Go implementation remains the shipped implementation until the S5 gate
+# (product decision, 2026-10-09). The port never touches Go files — the two
+# trees coexist until cutover.
+#
+# Crate layout mirrors the Go code's responsibilities (approved review plan):
+#   crates/age-format      <- root-package glue, internal/format,
+#                             internal/stream, internal/bech32
+#   crates/age-recipients  <- x25519.go, scrypt.go, pq.go, agessh/, tag/
+#   crates/age-plugin      <- plugin/ (client + framework halves)
+#   crates/age-armor       <- armor/
+# CLI binaries (cmd/age, cmd/age-keygen, ...) arrive in Stage S4.
+
+[workspace]
+resolver = "3"
+members = [
+    "crates/age-format",
+    "crates/age-recipients",
+    "crates/age-plugin",
+    "crates/age-armor",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+# Publishing is deliberately off: crates.io `age` is taken, and the package /
+# binary naming question (open question Q3 in the review plan) is undecided.
+publish = false
+
+[workspace.lints.rust]
+# The port writes protocol and glue only (locked decision 4: no hand-rolled
+# cryptography) — there is no legitimate need for unsafe anywhere in these
+# crates. Dependencies may use it internally; that is what the advisory and
+# audit gates watch.
+unsafe_code = "forbid"
+
+# Dependency selection. Locked decisions apply: audited crates only, nothing
+# hand-rolled, and rage / the Rust `age` crate are neither the implementation
+# base nor a design reference (product decision, 2026-10-09).
+#
+# Every pin is exact (`=x.y.z`) on purpose: a crypto tool must never silently
+# pick up new cryptographic code from a range constraint. Bumps are
+# deliberate, reviewed commits that update Cargo.lock and the rationale notes
+# in port/README.md. Version chosen as the latest stable release on
+# crates.io at pin time (2026-10-09).
+[workspace.dependencies]
+# --- Wire/format primitives (crates/age-format; implementation in S1) -----
+
+# STREAM payload cipher (Go: internal/stream — ChaCha20-Poly1305 per
+# age-encryption.org/v1). RustCrypto's implementation is the ecosystem
+# standard, constant-time, and covered by its own test suites.
+chacha20poly1305 = "=0.11.0"
+
+# HKDF-SHA256 for the header MAC and stream key derivation
+# (age-encryption.org/v1, §header MAC / §payload). RustCrypto crate;
+# the hash implementation (sha2) is added as a direct pin when S1 wires it.
+hkdf = "=0.13.0"
+
+# Key-string encoding for every HRP the format knows: `age1`,
+# `AGE-SECRET-KEY-1`, `age1pq`, `AGE-SECRET-KEY-PQ-1`, `age1tag`,
+# `AGE-PLUGIN-` (Go: internal/bech32). Owned by age-format so all encodings
+# share one code path; recipients consume it through the format crate.
+bech32 = "=0.12.0"
+
+# --- Recipient primitives (crates/age-recipients; S2/S3) ------------------
+
+# X25519 recipient/identity (Go: x25519.go). The curve25519-dalek family is
+# the most-reviewed X25519 implementation in Rust.
+curve25519-dalek = "=5.0.0"
+
+# scrypt passphrase recipient, including Go's work-factor handling and the
+# wordlist auto-generation flow — strictness included (Go: scrypt.go).
+# RustCrypto crate.
+scrypt = "=0.12.0"
+
+# ML-KEM-768 (FIPS 203) primitive for the faithful pq.go port: the
+# ML-KEM-768 + X25519 hybrid recipient over HPKE, HPKE label
+# `age-encryption.org/mlkem768x25519` (Go: pq.go + filippo.io/hpke v0.4.0).
+# libcrux is formally verified with an audited mlkem768 API; 0.0.11 is the
+# current release (published 2026-10-07). It supplies the KEM primitive ONLY —
+# pq.go and filippo.io/hpke remain the normative reference for all protocol
+# behavior. rage / the `age` crate cannot stand in: they do not implement
+# this recipient (review plan, R3).
+libcrux-ml-kem = "=0.0.11"

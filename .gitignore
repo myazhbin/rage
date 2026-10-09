@@ -1,0 +1,2 @@
+# Rust port build artifacts (added S0). The port never touches Go files.
+/target/

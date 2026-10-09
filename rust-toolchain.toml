@@ -1,0 +1,11 @@
+# Pinned toolchain for the Rust port of age (Stage S0).
+#
+# The exact patch version is deliberate: local builds and CI must compile the
+# cryptographic dependency graph identically, so the toolchain moves only via
+# a reviewed commit. Read by rustup locally and by
+# actions-rust-lang/setup-rust-toolchain in CI (rust.yml).
+
+[toolchain]
+channel = "1.99.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

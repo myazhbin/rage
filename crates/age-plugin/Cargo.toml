@@ -1,0 +1,13 @@
+# Ports (Go v1.3.2 is the behavioral oracle): plugin/ — client and framework
+# halves of the age plugin protocol, stanza encode/decode, TUI helpers.
+# Empty in S0: implementation arrives with the plugin recipient in S3.
+
+[package]
+name = "age-plugin"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lints]
+workspace = true
