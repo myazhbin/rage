@@ -109,11 +109,13 @@ fn parse_vector(name: &str, contents: &[u8]) -> Vector {
         let Some(nl) = rest.iter().position(|&b| b == b'\n') else {
             panic!("invalid test file: no payload: {name}");
         };
-        let line = match line.strip_suffix(&b"\r"[..]) {
-            Some(stripped) => stripped,
-            None => line,
-        };
+        let line = &rest[..nl];
         rest = &rest[nl + 1..];
+        // Go's testkit reads the metadata block with bufio.Scanner, whose
+        // ScanLines drops a trailing carriage return; mirror that so a
+        // CRLF-checked-out corpus still parses (the corpus bytes themselves
+        // are pinned -text in .gitattributes, which is the real fix).
+        let line = line.strip_suffix(b"\r").unwrap_or(line);
         if line.is_empty() {
             break;
         }
@@ -211,5 +213,22 @@ impl Rng {
 
     pub fn vec(&mut self, len: usize) -> Vec<u8> {
         (0..len).map(|_| self.byte()).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The metadata parser tolerates CRLF line endings the way Go's
+    /// ScanLines-based testkit does (dropCR), while the raw file bytes after
+    /// the separator are kept verbatim, CR or not.
+    #[test]
+    fn parse_vector_tolerates_crlf_metadata() {
+        let crlf: &[u8] = b"expect: success\r\nfile key: 00\r\n\r\npayload\r\nbytes\r\n";
+        let v = parse_vector("crlf", crlf);
+        assert_eq!(v.expect, Expect::Success);
+        assert_eq!(v.file_key.as_deref(), Some(&[0x00][..]));
+        assert_eq!(v.file, b"payload\r\nbytes\r\n");
     }
 }
