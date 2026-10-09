@@ -1,0 +1,4 @@
+# Conformance vectors are byte-exact fixtures: checkout must never convert
+# their line endings (a CRLF-corrupted metadata line breaks the parser and a
+# corrupted payload changes the test itself).
+crates/age-format/tests/cctv/** -text

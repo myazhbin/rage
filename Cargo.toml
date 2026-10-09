@@ -59,11 +59,31 @@ chacha20poly1305 = "=0.11.0"
 # the hash implementation (sha2) is added as a direct pin when S1 wires it.
 hkdf = "=0.13.0"
 
+# SHA-256: HKDF's hash for the header MAC and stream keys (S1 direct pin —
+# previously transitive via hkdf). RustCrypto crate.
+sha2 = "=0.11.0"
+
+# HMAC-SHA256 for the header MAC (age-encryption.org/v1, §header MAC).
+# RustCrypto crate.
+hmac = "=0.13.0"
+
+# Stanza-body base64 (Go: internal/format DecodeString — RawStdEncoding
+# STRICT with LF wrapping). S1 direct pin: the format layer needs it before
+# armor (S2). The engine is configured to reject padding and non-canonical
+# trailing bits, matching Go's decoder; see crates/age-format/src/format.rs.
+base64 = "=0.23.1"
+
 # Key-string encoding for every HRP the format knows: `age1`,
 # `AGE-SECRET-KEY-1`, `age1pq`, `AGE-SECRET-KEY-PQ-1`, `age1tag`,
-# `AGE-PLUGIN-` (Go: internal/bech32). Owned by age-format so all encodings
-# share one code path; recipients consume it through the format crate.
-bech32 = "=0.12.0"
+# `AGE-PLUGIN-` (Go: internal/bech32) is a hand port in age-format: Go drops
+# the BIP173 length limit and ASCII-folds the data part, and no published
+# crate reproduces both behaviors, so the port keeps the oracle's code path
+# (see crates/age-format/src/bech32.rs).
+
+# zlib inflate for the CCTV vectors stored with `compressed: zlib`
+# (Go: testkit_test.go parseVector). Test-only: decompresses fixtures, never
+# touches real cryptographic paths. miniz_oxide backend (pure Rust).
+flate2 = "=1.1.10"
 
 # --- Recipient primitives (crates/age-recipients; S2/S3) ------------------
 
