@@ -65,6 +65,12 @@ jobs:
   audit:
     name: cargo-audit
     runs-on: ubuntu-latest
+    # New repositories default the workflow token to read-only; audit-check
+    # publishes its result as a commit check-run and needs checks:write.
+    # Scoped to this job only — every other job stays contents:read.
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v2.0.0
