@@ -109,7 +109,10 @@ fn parse_vector(name: &str, contents: &[u8]) -> Vector {
         let Some(nl) = rest.iter().position(|&b| b == b'\n') else {
             panic!("invalid test file: no payload: {name}");
         };
-        let line = &rest[..nl];
+        let line = match line.strip_suffix(&b"\r"[..]) {
+            Some(stripped) => stripped,
+            None => line,
+        };
         rest = &rest[nl + 1..];
         if line.is_empty() {
             break;
